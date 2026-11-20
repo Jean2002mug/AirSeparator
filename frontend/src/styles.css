@@ -1,0 +1,159 @@
+:root {
+  color-scheme: dark;
+  --canvas: #0F172A;
+  --panel: #1E293B;
+  --text: #E2E8F0;
+  --muted: #94A3B8;
+  --blue: #5A99E3;
+  --line: #334155;
+  --amber: #f6b869;
+  --mono: 'IBM Plex Mono', Consolas, monospace;
+  font: 15px/1.45 Inter, 'Segoe UI', sans-serif;
+  background: var(--canvas);
+  color: var(--text);
+}
+* { box-sizing: border-box }
+body { margin: 0 }
+.lucide { width: 18px; height: 18px; stroke-width: 1.7; flex: none }
+h1, h2, p { margin: 0 }
+h1 { font-size: clamp(27px, 3vw, 39px); font-weight: 620; line-height: 1.15; letter-spacing: -.045em }
+h2 { font-size: 16px; letter-spacing: -.02em; font-weight: 620 }
+small { color: var(--muted) }
+button, input, select { font: inherit; color: inherit }
+button, select { cursor: pointer }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #27364b;
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 11px; font-size: 13px; font-weight: 600 }
+button:hover { background: #354861 }
+button:disabled, input:disabled { opacity: .5; cursor: default }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px }
+.topbar { background: #111b2e; border-bottom: 1px solid var(--line) }
+.topbar-inner, main { max-width: 1490px; margin: auto; padding-inline: clamp(16px, 4vw, 64px) }
+.topbar-inner { display: flex; align-items: center; height: 64px; gap: 44px }
+.brand { display: inline-flex; align-items: center; text-decoration: none; color: var(--text); font-size: 21px; font-weight: 700; letter-spacing: -.055em }
+.brand > span:last-child { color: #97bff0 }
+.brand-icon { display: grid; place-items: center; width: 33px; height: 33px; border-radius: 9px; background: #5A99E3; color: #101c30; margin-right: 10px }
+.brand-icon svg { width: 25px; height: 25px; stroke-width: 1.9 }
+nav { display: flex; align-items: stretch; align-self: stretch; gap: 24px }
+nav a { display: flex; align-items: center; text-decoration: none; font-weight: 500; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent }
+nav a:hover, nav a:focus-visible { color: var(--text); border-color: var(--blue) }
+.connection, .quiet-label, .map-key > span, .label-row { display: inline-flex; align-items: center; gap: 8px }
+.connection { margin-left: auto; font-size: 12px; color: var(--muted) }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none }
+.dot.green { background: #69c9ab; box-shadow: 0 0 0 4px #69c9ab12 }
+.dot.amber { background: var(--amber) }
+.dot.blue { background: var(--blue) }
+main { padding-block: 30px 40px; scroll-margin-top: 12px }
+.workspace-heading { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 16px; margin-bottom: 22px }
+.workspace-heading p, .assistant p { color: var(--muted); margin-top: 5px; font-size: 14px }
+.scenario-select { display: grid; gap: 5px; font-size: 12px; color: var(--muted) }
+.select-shell { position: relative; display: flex; align-items: center; color: var(--text) }
+.select-shell svg { position: absolute; pointer-events: none; color: var(--blue); margin-left: 12px; width: 16px }
+.select-shell svg:last-child { right: 10px; color: var(--muted) }
+select { appearance: none; background: var(--panel); border: 1px solid #3b4c63; border-radius: 7px; padding: 9px 32px 9px 38px; width: 100%; font-size: 13px }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px }
+.metric, .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px }
+.metric { padding: 14px 18px; display: flex; justify-content: space-between; align-items: center }
+.metric > svg { color: #86aad3; width: 22px; height: 22px }
+.metric span { color: #b3c1d2; font-size: 12px; font-weight: 550 }
+.metric strong { display: block; font: 600 27px/1.25 var(--mono); margin-top: 4px }
+.metric.warn { background: linear-gradient(110deg,#302d30,var(--panel)); border-color: #5c4a3a }
+.metric.warn > svg, .metric.warn strong { color: var(--amber) }
+.workspace-grid { display: grid; grid-template-columns: minmax(0,1.85fr) minmax(315px,1fr); gap: 16px; align-items: stretch }
+.sidebar { display: flex; flex-direction: column; gap: 14px; min-width: 0 }
+.panel { overflow: hidden }
+.panel-heading { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 17px; border-bottom: 1px solid var(--line) }
+.panel-heading h2 { display: flex; align-items: center; gap: 9px }
+.panel-heading h2 svg { color: #8bb7ec }
+.panel-heading button svg { width: 15px; height: 15px }
+.quiet, .quiet-label { color: #b4c4d8; font-size: 12px }
+.quiet { background: transparent; padding: 5px 8px }
+.map-panel { display: flex; flex-direction: column }
+.map-wrap { position: relative; flex: 1; min-height: 315px; isolation: isolate }
+.map { position: absolute; inset: 0; background-color: #172436; background-image: linear-gradient(#31435b50 1px,transparent 1px),linear-gradient(90deg,#31435b50 1px,transparent 1px); background-size: 36px 36px }
+.map .leaflet-tile-pane { filter: grayscale(.75) invert(1) hue-rotate(180deg) brightness(.8) contrast(.87) }
+.map .leaflet-control-attribution { background: #101a2ce8; color: var(--muted); font-size: 10px }
+.map .leaflet-control-attribution a { color: #95b9e3 }
+.map .leaflet-control-scale-line { background: #162234da; color: #d6dee8; border-color: #8796ab; text-shadow: none }
+.map .leaflet-control-zoom { border: 1px solid #516076; overflow: hidden }
+.map .leaflet-control-zoom a { background: var(--panel); color: var(--text); border-color: var(--line) }
+.aircraft-marker { color: #9ec9ff; font: 24px/28px 'Segoe UI Symbol',sans-serif; text-align: center; filter: drop-shadow(0 1px 3px #000) }
+.aircraft-marker.is-warning { color: var(--amber) }
+.map .map-tag { background: #111e30ed; color: var(--text); border: 1px solid #527397; border-radius: 4px; box-shadow: 0 2px 5px #07101d60; padding: 4px 7px; font: 600 12px/1.25 var(--mono) }
+.map .map-tag::before { display: none }
+.map .map-tag.is-warning { border-color: #a17d4e }
+.map-tag small { display: block; font-size: 10px; font-weight: 400 }
+.tile-notice { position: absolute; z-index: 500; bottom: 24px; left: 10px; max-width: 85%; padding: 4px 7px; background: #111e30ee; border-radius: 4px; color: var(--muted); font-size: 11px; pointer-events: none }
+.map-key { display: flex; gap: 18px; align-items: center; color: var(--muted); font-size: 11px; padding: 9px 16px; border-top: 1px solid var(--line) }
+.dash { width: 16px; border-top: 2px dashed var(--amber) }
+.map-units { margin-left: auto; font-family: var(--mono) }
+.add-btn, .primary { color: #102137; border-color: transparent; background: var(--blue) }
+.add-btn:hover, .primary:hover { background: #85b6f0 }
+.add-btn { font-size: 12px; padding: 6px 9px }
+.roster { margin: 0; padding: 0 15px; list-style: none; max-height: 310px; overflow: auto }
+.roster li { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line) }
+.roster li:last-child { border-bottom: none }
+.plane-tile, .assistant-icon { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 7px; background: #2b3c53; color: #8cb8eb; flex: none }
+.plane-info { display: flex; align-items: baseline; gap: 2px 9px; flex-wrap: wrap; flex: 1; font-family: var(--mono) }
+.plane-info strong, td strong { font-size: 13px; letter-spacing: .025em }
+.plane-info span { font-size: 11px; color: #c5d1e1 }
+.plane-info small { width: 100%; font-size: 11px }
+.row-actions { display: flex }
+.icon-btn { width: 28px; height: 30px; padding: 4px; background: none; border: none; color: var(--muted) }
+.icon-btn svg { width: 15px; height: 15px }
+.remove:hover { color: #ffb3a5 }
+.threshold-fields, .form-fields { padding: 13px 17px; display: grid; grid-template-columns: 1fr 1fr; gap: 13px }
+.threshold-fields label, .form-fields label { display: grid; gap: 5px; font-size: 12px; color: #c8d4e2 }
+.threshold-fields label > span:first-child { display: flex; align-items: center; gap: 5px }
+.threshold-fields svg { width: 14px; height: 14px; color: var(--muted) }
+.number-box { display: flex; align-items: center; background: var(--canvas); border: 1px solid #435369; border-radius: 5px; padding-right: 9px }
+.number-box b { color: var(--muted); font-size: 11px }
+input { min-width: 0; width: 100%; background: var(--canvas); border: 1px solid #44536a; border-radius: 5px; padding: 7px 9px; font-family: var(--mono) }
+.number-box input { border: 0; background: transparent }
+.number-box.invalid { border-color: var(--amber) }
+.threshold-fields small { font-size: 10px }
+.results { margin-top: 16px; scroll-margin: 15px }
+.quiet-label svg { width: 14px; color: var(--blue) }
+.table-scroll { overflow-x: auto }
+table { width: 100%; border-collapse: collapse; white-space: nowrap; text-align: left }
+th, td { padding: 10px 18px }
+th { color: var(--muted); background: #1a2538; font-size: 11px; letter-spacing: .045em; text-transform: uppercase; font-weight: 600 }
+td { border-top: 1px solid var(--line); font: 13px var(--mono) }
+td > svg { display: inline-block; vertical-align: middle; width: 14px; margin: 0 12px; color: var(--muted) }
+.chip, .sprint-tag { display: inline-flex; align-items: center; gap: 6px; border-radius: 4px; padding: 4px 7px; font: 600 10px/1.35 var(--mono); letter-spacing: .04em; background: #26374a; color: #bbcadc; border: 1px solid #3d5167 }
+.chip svg { width: 12px; height: 12px }
+.chip .dot { height: 5px; width: 5px }
+.chip.warn { color: var(--amber); background: #3c322b; border-color: #6e5641 }
+.assistant { display: flex; align-items: center; gap: 13px; padding: 17px; margin-top: 16px }
+.assistant h2 { font-size: 15px }
+.assistant p { font-size: 12px }
+.sprint-tag { margin-left: auto; white-space: nowrap }
+dialog { background: var(--panel); color: var(--text); border: 1px solid #4d5f78; border-radius: 12px; padding: 0; width: min(440px,92vw); box-shadow: 0 24px 80px #0008 }
+dialog::backdrop { background: #060b16b9 }
+.form-fields { gap: 14px; padding-block: 18px }
+.form-fields label small { font-size: 10px }
+.form-fields .error { grid-column: 1/-1 }
+.form-actions { display: flex; justify-content: end; gap: 8px; padding: 12px 17px; border-top: 1px solid var(--line) }
+.empty { padding: 18px; color: var(--muted); font-size: 13px }
+.error-banner { display: flex; align-items: center; gap: 10px; border: 1px solid #695540; border-radius: 7px; background: #332d2b; padding: 10px 14px; margin-bottom: 14px }
+.error, .error-banner { color: var(--amber); font-size: 13px }
+.error-banner button { margin-left: auto }
+@media(max-width:850px) {
+  .workspace-grid { grid-template-columns: 1fr }
+  .sidebar { display: grid; grid-template-columns: 1.2fr 1fr; align-items: start }
+  .metrics { gap: 8px }
+  .metric { padding: 11px }
+}
+@media(max-width:620px) {
+  nav { display: none }
+  .topbar-inner { height: 54px; gap: 12px }
+  main { padding-block: 20px }
+  .workspace-heading { align-items: start }
+  .scenario-select, .sidebar { width: 100% }
+  .metrics { grid-template-columns: 1fr 1fr }
+  .sidebar { display: flex }
+  .map-wrap { min-height: 285px }
+  .map-units { display: none !important }
+  th, td { padding: 10px }
+  td > svg { margin-inline: 5px }
+  .quiet-label { font-size: 10px }
+}

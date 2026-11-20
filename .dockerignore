@@ -1,0 +1,12 @@
+# The backend needs the root CMake project and these source directories only.
+**
+!CMakeLists.txt
+!backend/
+!backend/include/
+!backend/include/**
+!backend/src/
+!backend/src/**
+!backend/tests/
+!backend/tests/**
+!backend/third_party/
+!backend/third_party/**

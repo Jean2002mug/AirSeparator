@@ -1,0 +1,33 @@
+cmake_minimum_required(VERSION 3.20)
+project(AirSeparator LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+add_library(separation backend/src/Separation.cpp)
+target_include_directories(separation PUBLIC backend/include)
+
+find_package(Threads REQUIRED)
+add_executable(airseparator backend/src/server.cpp)
+target_include_directories(airseparator SYSTEM PRIVATE backend/third_party)
+target_link_libraries(airseparator PRIVATE separation Threads::Threads)
+if(WIN32)
+    target_link_libraries(airseparator PRIVATE ws2_32)
+endif()
+if(MSVC)
+    target_compile_options(airseparator PRIVATE /bigobj /utf-8)
+endif()
+
+include(CTest)
+if(BUILD_TESTING)
+    foreach(test IN ITEMS vertical separation)
+        add_executable(test_${test} backend/tests/test_${test}.cpp)
+        target_link_libraries(test_${test} PRIVATE separation)
+        add_test(NAME ${test} COMMAND test_${test})
+    endforeach()
+    find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME rest_api COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/backend/tests/test_api.py" $<TARGET_FILE:airseparator>)
+    set_tests_properties(rest_api PROPERTIES TIMEOUT 60)
+endif()
