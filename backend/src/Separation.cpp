@@ -15,16 +15,23 @@ void checkRange(double value, double minimum, double maximum, const std::string&
 }
 
 void normalizeCallSign(std::string& callSign) {
-    if (callSign.empty() || callSign.size() > 7) {
-        throw std::invalid_argument("callSign must be 1 to 7 alphanumeric characters");
-    }
+    constexpr char whitespace[] = " \t\r\n\f\v";
+    const auto first = callSign.find_first_not_of(whitespace);
+    if (first == std::string::npos || callSign.find_last_not_of(whitespace) - first >= 7)
+        throw std::invalid_argument("callSign must be 1 to 7 characters after trimming");
+    callSign = callSign.substr(first, callSign.find_last_not_of(whitespace) - first + 1);
+    bool hasLetter = false;
     for (char& c : callSign) {
         if (c >= 'a' && c <= 'z') {
             c = static_cast<char>(c - 'a' + 'A');
-        } else if (!(c >= 'A' && c <= 'Z') && !(c >= '0' && c <= '9')) {
+        }
+        if (c >= 'A' && c <= 'Z') {
+            hasLetter = true;
+        } else if (!(c >= '0' && c <= '9')) {
             throw std::invalid_argument("callSign may contain only A-Z, a-z and 0-9");
         }
     }
+    if (!hasLetter) throw std::invalid_argument("callSign must contain at least one letter");
 }
 }
 

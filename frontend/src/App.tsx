@@ -1,117 +1,248 @@
-import { useState } from 'react'
-import { Activity, ArrowLeftRight, ArrowUpDown, ChevronDown, CircleCheck, FlagTriangleRight,
-  GitCompareArrows, Layers3, List, Pencil, Plane, Plus, Radar, SlidersHorizontal,
-  Sparkles, Trash2, TriangleAlert } from 'lucide-react'
-import { AircraftForm } from './AircraftForm'
-import { AirspaceMap } from './AirspaceMap'
-import { formatNumber, inRange, samples, type Aircraft, type Config, type Results, type Thresholds } from './scenario'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { Moon, Sun } from 'lucide-react'
+import logo from './assets/airseparator.svg'
+import { AircraftPage } from './AircraftPage'
+import { SimulationPage } from './SimulationPage'
+import { ScenariosPage, type CatalogSelection } from './ScenariosPage'
+import { ResultsPage } from './ResultsPage'
+import { AboutPage } from './AboutPage'
+import {
+  calculationBody,
+  inRange,
+  pairId,
+  type MarkerAircraft,
+  type Scenario,
+  type Config,
+  type Results,
+  type Thresholds,
+} from './scenario'
 import { useApi } from './useApi'
+import { defaultFilter, visiblePairs, type PairFilter, type Card } from './pairView'
+import { readSession, sessionKey } from './session'
 
-const axes = [
-  { key: 'horizontalNm', name: 'Horizontal', unit: 'NM', Icon: ArrowLeftRight },
-  { key: 'verticalFeet', name: 'Vertical', unit: 'ft', Icon: ArrowUpDown },
-] as const
-
+const pages = ['Simulation', 'Aircraft', 'Scenarios', 'Results', 'About'] as const
+type Page = (typeof pages)[number]
+function currentPage(): Page {
+  return pages.find((p) => '#' + p.toLowerCase() === window.location.hash) ?? 'Simulation'
+}
+function initialTheme() {
+  try {
+    const saved = localStorage.getItem('airseparator-theme')
+    if (saved === 'dark' || saved === 'light') return saved
+  } catch {
+    /* Storage can be disabled. */
+  }
+  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
 export default function App() {
-  const [aircraft, setAircraft] = useState<Aircraft[]>(samples[0].aircraft)
-  const [sample, setSample] = useState('0')
-  const [editing, setEditing] = useState<Aircraft | 'new' | null>(null)
+  const [page, setPage] = useState(currentPage),
+    [theme, setTheme] = useState(initialTheme)
+  const [saved] = useState(readSession)
+  const [sample, setSample] = useState(saved.sample)
+  const [scenario, setScenario] = useState(saved.scenario),
+    [user, setUser] = useState<MarkerAircraft[]>(saved.user)
+  const [catalog, setCatalog] = useState(saved.catalog)
+  const updateCatalog = (update: Partial<CatalogSelection>) => setCatalog(c => ({...c, ...update}))
+  useEffect(() => {
+    try { sessionStorage.setItem(sessionKey, JSON.stringify({name:sample.name, scenario, user, catalog})) }
+    catch { /* Navigation still retains the in-memory workspace if storage is disabled. */ }
+  }, [sample, scenario, user, catalog])
+  const [filter, setFilter] = useState(defaultFilter)
+  const [showRoster, setShowRoster] = useState(true)
+  const aircraft = useMemo(() => [...scenario, ...user], [scenario, user])
   const [inputs, setInputs] = useState<Partial<Record<keyof Thresholds, string>>>({})
-  const [attempt, setAttempt] = useState(0)
+  const [selected, setSelected] = useState(''),
+    [error, setError] = useState(''),
+    [attempt, setAttempt] = useState(0)
   const settings = useApi<Config>('/api/config', undefined, true, attempt)
   const config = settings?.data
-  const thresholdText = (key: keyof Thresholds) => inputs[key] ?? String(config?.defaults[key] ?? '')
-  const thresholds = { horizontalNm: Number(thresholdText('horizontalNm')), verticalFeet: Number(thresholdText('verticalFeet')) }
-  const validThresholds = !!config && axes.every(({ key }) => inRange(thresholdText(key), config.limits[key]))
-  const validCount = !!config && aircraft.length >= config.limits.aircraft.min && aircraft.length <= config.limits.aircraft.max
-  const calculation = useApi<Results>('/api/conflicts', JSON.stringify({ aircraft, thresholds }), validThresholds && validCount, attempt)
-  const incompatible = calculation?.data?.pairs.some(p => p.status !== 'WARNING' && p.status !== 'NO_WARNING')
-  const results = incompatible ? undefined : calculation?.data
-  const error = settings?.error || calculation?.error || (incompatible ? 'The API returned an older status. Rebuild and restart the Sprint 2 server.' : '')
-  const pending = !settings || (validThresholds && validCount && !calculation)
-
-  function loadSample(index: string) {
-    setSample(index)
-    setAircraft(samples[Number(index)].aircraft)
+  const values = {
+    horizontalNm: inputs.horizontalNm ?? String(config?.defaults.horizontalNm ?? ''),
+    verticalFeet: inputs.verticalFeet ?? String(config?.defaults.verticalFeet ?? ''),
+  }
+  const thresholds = { horizontalNm: Number(values.horizontalNm), verticalFeet: Number(values.verticalFeet) }
+  const validThresholds =
+    !!config &&
+    inRange(values.horizontalNm, config.limits.horizontalNm) &&
+    inRange(values.verticalFeet, config.limits.verticalFeet)
+  const limit = config?.limits.aircraft.max ?? 20
+  const validCount = aircraft.length >= (config?.limits.aircraft.min ?? 2) && aircraft.length <= limit
+  const calc = useApi<Results>(
+    '/api/conflicts',
+    calculationBody(aircraft, thresholds),
+    validThresholds && validCount,
+    attempt,
+  )
+  const results = calc?.data
+  const pairs = useMemo(() => visiblePairs(results?.pairs ?? [], filter), [results, filter])
+  function changeFilter(update: Partial<PairFilter>) {
+    setFilter(previous => ({ ...previous, ...update }))
+    setShowRoster(false)
+  }
+  function chooseCard(card: Card) {
+    setShowRoster(card === 'Aircraft')
+    setFilter(previous => ({ ...previous,
+      scope: card === 'Aircraft Pairs' ? 'nearby' : previous.scope,
+      status: card === 'Warning Pairs' ? 'WARNING' : card === 'No-Warning Pairs' ? 'NO_WARNING' : 'any' }))
+  }
+  const view = { filter, change: changeFilter, pairs }
+  const pair =
+    pairs.find((p) => pairId(p) === selected) ?? pairs.find((p) => p.status === 'WARNING') ?? pairs[0]
+  useEffect(() => {
+    if (results && selected && !pairs.some(p => pairId(p) === selected)) setSelected('')
+  }, [results, pairs, selected])
+  const apiError = settings?.error || calc?.error
+  const message = apiError
+    ? 'Engine results unavailable.'
+    : !config
+      ? 'Connecting to the engine…'
+      : !validCount
+        ? 'Use 2–20 aircraft to calculate separation.'
+        : !validThresholds
+          ? 'Enter thresholds within the displayed ranges.'
+          : 'Calculating separation…'
+  useEffect(() => {
+    const change = () => {
+      setPage(currentPage())
+      setError('')
+      window.scrollTo(0, 0)
+    }
+    window.addEventListener('hashchange', change)
+    return () => window.removeEventListener('hashchange', change)
+  }, [])
+  useEffect(() => {
+    document.title = page + ' · AirSeparator'
+  }, [page])
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try {
+      localStorage.setItem('airseparator-theme', theme)
+    } catch {
+      /* Session theme still works. */
+    }
+  }, [theme])
+  function load(s: Scenario) {
+    const duplicate = user.find((p) => s.aircraft.some((a) => a.callSign === p.callSign))
+    if (duplicate || user.length + s.aircraft.length > limit) {
+      setError(
+        duplicate
+          ? 'Rename or remove your aircraft ' + duplicate.callSign + ' before loading this scenario.'
+          : 'Loading ' + s.name + ' would give ' + s.aircraft.length + ' scenario + ' + user.length + ' user-added aircraft. The limit is ' + limit + '. Remove ' + (user.length + s.aircraft.length - limit) + ' aircraft to load it.',
+      )
+      return
+    }
+    setSample(s)
+    updateCatalog({selected: s.name})
+    setScenario(s.aircraft)
     setInputs({})
+    setError('')
+    setSelected('')
+    window.location.hash = 'simulation'
   }
-  function savePlane(plane: Aircraft) {
-    setAircraft(editing === 'new' ? [...aircraft, plane] : aircraft.map(p => p === editing ? plane : p))
-    setEditing(null)
-    setSample('custom')
-  }
-
-  return <>
-    <header className="topbar"><div className="topbar-inner">
-      <a className="brand" href="#workspace"><span className="brand-icon"><Radar/></span>Air<span>Separator</span></a>
-      <nav aria-label="Main navigation"><a href="#workspace">Workspace</a><a href="#results">Pair results</a></nav>
-      <div className="connection" role="status"><i className={'dot ' + (error ? 'amber' : config ? 'green' : '')}/>
-        {error ? 'Engine issue' : config ? 'Engine connected' : 'Connecting'}</div>
-    </div></header>
-    <main id="workspace">
-      <div className="workspace-heading"><div><h1>Simulation workspace</h1><p>Static aircraft separation analysis</p></div>
-        <label className="scenario-select"><span>Sample scenario</span>
-          <span className="select-shell"><Layers3/><select value={sample} onChange={e => loadSample(e.target.value)}>
-            {sample === 'custom' && <option value="custom" disabled>Custom scenario</option>}
-            {samples.map((s, i) => <option key={s.name} value={i}>{s.name} · {s.description}</option>)}
-          </select><ChevronDown/></span>
-        </label>
-      </div>
-      {error && <div className="error-banner" role="alert"><TriangleAlert/><span>{error}</span>
-        <button onClick={() => setAttempt(n => n + 1)}>Retry</button></div>}
-      <section className="metrics" aria-label="Scenario summary">
-        {[
-          { label: 'Aircraft', count: aircraft.length, Icon: Plane },
-          { label: 'Pairs evaluated', count: results?.pairs.length, Icon: GitCompareArrows },
-          { label: 'Warning pairs', count: results?.warningCount, Icon: TriangleAlert },
-          { label: 'No-warning pairs', count: results && results.pairs.length - results.warningCount, Icon: CircleCheck },
-        ].map(({ label, count, Icon }) => <div className={'metric' + (label === 'Warning pairs' && count ? ' warn' : '')} key={label}>
-          <div><span>{label}</span><strong>{count ?? '—'}</strong></div><Icon/></div>)}
-      </section>
-      <div className="workspace-grid">
-        <AirspaceMap aircraft={aircraft} results={results}/>
-        <div className="sidebar">
-          <section className="panel">
-            <div className="panel-heading"><h2><Plane/>Aircraft roster</h2>
-              <button className="add-btn" disabled={aircraft.length >= (config?.limits.aircraft.max ?? 20)} onClick={() => setEditing('new')}><Plus/>Add aircraft</button></div>
-            <ul className="roster">{aircraft.map(p => <li key={p.callSign}>
-              <div className="plane-tile"><Plane/></div>
-              <div className="plane-info"><strong>{p.callSign}</strong><span>{formatNumber(p.altitudeFeet)} ft</span>
-                <small>{formatNumber(p.latitudeDegrees, 4)}°, {formatNumber(p.longitudeDegrees, 4)}°</small></div>
-              <div className="row-actions"><button className="icon-btn" title={'Edit ' + p.callSign} aria-label={'Edit ' + p.callSign} onClick={() => setEditing(p)}><Pencil/></button>
-                <button className="icon-btn remove" title={'Remove ' + p.callSign} aria-label={'Remove ' + p.callSign}
-                  onClick={() => { setAircraft(aircraft.filter(other => other !== p)); setSample('custom') }}><Trash2/></button></div>
-            </li>)}</ul>
-            {aircraft.length === 0 && <p className="empty">Add aircraft or choose a sample scenario.</p>}
-          </section>
-          <section className="panel thresholds"><div className="panel-heading"><h2><SlidersHorizontal/>Separation thresholds</h2></div>
-            <div className="threshold-fields">{axes.map(({ key, name, unit, Icon }) => {
-              const range = config?.limits[key]
-              const invalid = !!range && !inRange(thresholdText(key), range)
-              return <label key={key}><span><Icon/>{name}</span><span className={'number-box' + (invalid ? ' invalid' : '')}>
-                <input type="number" step="any" min={range?.min} max={range?.max} value={thresholdText(key)} disabled={!config}
-                  aria-label={name + ' threshold in ' + unit} aria-invalid={invalid} required
-                  onChange={e => { setInputs({ ...inputs, [key]: e.target.value }); setSample('custom') }}/><b>{unit}</b></span>
-                <small>{range ? `${formatNumber(range.min)}–${formatNumber(range.max)} ${unit}` : 'Loading limits…'}</small></label>
-            })}</div>
-          </section>
+  const choose = (p: NonNullable<typeof pair>) => setSelected(pairId(p))
+  return (
+    <>
+      <a
+        className="skip"
+        href="#page-content"
+        onClick={(e) => {
+          e.preventDefault()
+          document.getElementById('page-content')?.focus()
+        }}
+      >
+        Skip to content
+      </a>
+      <header>
+        <div className="header-inner">
+          <a className="brand" href="#simulation">
+            <img src={logo} alt="" />
+            <span>
+              <b>AirSeparator</b>
+              <small>Aircraft Separation Simulator</small>
+            </span>
+          </a>
+          <nav aria-label="Main navigation">
+            {pages.map((p) => (
+              <a key={p} aria-current={p === page ? 'page' : undefined} href={'#' + p.toLowerCase()}>
+                {p}
+              </a>
+            ))}
+          </nav>
+          <button
+            className="theme-switch"
+            aria-label={'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' theme'}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            <Sun />
+            <Moon />
+          </button>
         </div>
+      </header>
+      <div id="page-content" tabIndex={-1}>
+        {(error || apiError) && (
+          <div role="alert" className="banner">
+            {error || apiError}{' '}
+            <button
+              onClick={() => {
+                setError('')
+                if (apiError) setAttempt((n) => n + 1)
+              }}
+            >
+              {apiError ? 'Retry' : 'Dismiss'}
+            </button>
+          </div>
+        )}
+        {page === 'Simulation' && (
+          <SimulationPage
+            aircraft={aircraft}
+            scenario={sample}
+            scenarioAircraft={scenario}
+            view={view}
+            showRoster={showRoster}
+            onCard={chooseCard}
+            load={load}
+            results={results}
+            pair={pair}
+            select={choose}
+            thresholds={thresholds}
+            values={values}
+            config={config}
+            change={(key, v) => setInputs({ ...inputs, [key]: v })}
+            message={message}
+          />
+        )}
+        {page === 'Aircraft' && (
+          <AircraftPage
+            user={user}
+            scenario={scenario}
+            limit={limit}
+            add={(rows, mode) => setUser(current => mode === 'replace' ? rows : [...current, ...rows])}
+            replace={(old, p) => {
+              const setter = user.includes(old) ? setUser : setScenario
+              setter((list) => list.map((a) => (a === old ? p : a)))
+            }}
+            remove={(p) => {
+              const setter = user.includes(p) ? setUser : setScenario
+              setter((list) => list.filter((a) => a !== p))
+            }}
+          />
+        )}
+        {page === 'Scenarios' && <ScenariosPage catalog={catalog} change={updateCatalog} onLoad={load} />}
+        {page === 'Results' && (
+          <ResultsPage
+            view={view}
+            onCard={chooseCard}
+            aircraft={aircraft}
+            title={sample.name + ' (' + aircraft.length + ')'}
+            results={results}
+            pair={pair}
+            select={choose}
+            thresholds={thresholds}
+            message={message}
+          />
+        )}
+        {page === 'About' && <AboutPage />}
       </div>
-      <section id="results" className="panel results" aria-labelledby="results-heading">
-        <div className="panel-heading"><h2 id="results-heading"><List/>Pairwise separation</h2>
-          <span className="quiet-label"><Activity/>{results ? 'Analysis complete' : error ? 'Analysis unavailable' : pending ? 'Calculating…' : 'Awaiting input'}</span></div>
-        {results ? <div className="table-scroll"><table><thead><tr><th>Aircraft pair</th><th>Horizontal</th><th>Vertical</th><th>Status</th></tr></thead>
-          <tbody>{results.pairs.map(p => <tr key={p.callSignA + '/' + p.callSignB}>
-            <td><strong>{p.callSignA}</strong><ArrowLeftRight/><strong>{p.callSignB}</strong></td>
-            <td>{formatNumber(p.horizontalNm)} <small>NM</small></td><td>{formatNumber(p.verticalFeet)} <small>ft</small></td>
-            <td><span className={'chip ' + (p.status === 'WARNING' ? 'warn' : '')}>{p.status === 'WARNING' ? <FlagTriangleRight/> : <span className="dot"/>}{p.status}</span></td>
-          </tr>)}</tbody></table></div> : <p className="empty" role="status">
-          {error ? 'Results unavailable.' : !config ? 'Connecting to the separation engine…' : !validCount ? 'Add at least two aircraft to evaluate separation.' :
-            !validThresholds ? 'Enter thresholds within the ranges shown.' : 'Evaluating aircraft pairs…'}</p>}
-      </section>
-      <section className="assistant panel"><span className="assistant-icon"><Sparkles/></span>
-        <div><h2>AI Explanation Assistant</h2><p>Educational explanations are planned for Sprint 4.</p></div><span className="sprint-tag">Sprint 4</span></section>
-    </main>
-    {editing && <AircraftForm original={editing === 'new' ? undefined : editing} roster={aircraft} onSave={savePlane} onClose={() => setEditing(null)}/>}
-  </>
+    </>
+  )
 }

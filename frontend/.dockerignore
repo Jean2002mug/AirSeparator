@@ -6,4 +6,7 @@
 !vite.config.ts
 !src/
 !src/**
+!public/
+!public/airlines/
+!public/airlines/*.svg
 !nginx.conf

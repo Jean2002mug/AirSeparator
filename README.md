@@ -10,6 +10,17 @@ If Docker Desktop reports **No virtualization available**, run `wsl --status`. E
 
 From the repository root:
 
+Start Docker Desktop
+```powershell
+docker desktop start --timeout 120
+```
+Creat and start both containers in backgound and wait 
+for health check to pass
+
+```powershell
+docker --context desktop-linux compose up -d --wait --wait-timeout 90
+```
+if docker desktop is already running 
 ```powershell
 docker compose build
 docker compose up -d --wait
@@ -27,6 +38,8 @@ python backend/tests/test_api.py --port 8088
 ```
 
 Health should report `ok`. The optional Python command runs the seven HTTP tests through Nginx, including both POST endpoints. In the browser, **Bay approach** should show one warning across three pairs and **Altitude spacing** should show zero. If startup fails, inspect `docker compose logs frontend backend`.
+
+To verify the five pages, run `node scripts/verify-ui.mjs` from the repository root with the stack running, Node.js 22+ and Chrome installed. It exercises editing, CSV import, filters, results, and keyboard navigation, and saves ten desktop captures to `design/screenshots/sprint-3.1/`. Set `CHROME_PATH` for a non-default Chrome executable and `AIRSEPARATOR_URL` for a different local port.
 
 The backend image build compiles C++20 and runs CTest. The frontend image build runs TypeScript checking and the Vite production build. The final images contain the server and the compiled website respectively. To repeat the build checks from scratch and then start the updated images:
 
@@ -68,7 +81,11 @@ npm.cmd run dev
 
 Open the local address Vite prints (usually `http://127.0.0.1:5173`). Vite forwards `/api` and `/health` to `http://127.0.0.1:8080`. To use another backend port, set `$env:AIRSEPARATOR_API_URL = 'http://127.0.0.1:8081'` before starting Vite. Run `npm.cmd run build` in `frontend` to type-check and generate the production files.
 
-Select **Bay approach** to see one warning across three pairs at the default thresholds, or **Altitude spacing** to see zero. Add, edit, or remove aircraft in the roster. Results refresh as you change aircraft or thresholds. Each sample restores the engine defaults. Positions are simulated, and map tiles require internet access. The AI Explanation Assistant is reserved for Sprint 4.
+The workspace opens on **Simulation** with four aircraft in the **Multiple Aircraft** scenario. Choose a pair to inspect the engine's distances and thresholds. **Scenarios** lets you filter, preview, and load examples. Loading resets scenario aircraft and thresholds, and keeps your user-added aircraft when the combined roster is valid.
+
+Use **Aircraft** to add, edit, remove, or import aircraft. CSV files use the header `callSign,latitudeDegrees,longitudeDegrees,altitudeFeet`, with an optional `color` column containing a hex color such as `#168afa`. Import validates the entire file before adding any rows. Scenario and roster edits last for the current browser session until reload. The theme switch remembers your preference across reloads.
+
+**Results** displays pairwise distances, a summary, and deterministic explanations from the engine response. Live AI follow-up is reserved for Sprint 4. **About** explains the model, rules, and educational use. Map tiles require internet access.
 
 ## Try a separation calculation
 

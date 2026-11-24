@@ -91,11 +91,12 @@ class ApiTests(unittest.TestCase):
 
     def test_inclusive_limits(self):
         result = self.request("/api/separation", {"aircraft": [
-            plane("1", -90, -180, -2000), plane("Abc1234", 90, 180, 60000)]})
+            plane("  a\t", -90, -180, -2000), plane(" Abc1234 ", 90, 180, 60000)]})
         pair, = result["pairs"]
+        self.assertEqual((pair["callSignA"], pair["callSignB"]), ("A", "ABC1234"))
         self.assertEqual(pair["verticalFeet"], 62000)
         self.assertAlmostEqual(pair["horizontalNm"], 10807.2829, places=3)
-        aircraft = [plane(str(i)) for i in range(20)]
+        aircraft = [plane(f"P{i}") for i in range(20)]
         result = self.request("/api/conflicts", {"aircraft": aircraft})
         expected = list(itertools.combinations([p["callSign"] for p in aircraft], 2))
         self.assertEqual([(p["callSignA"], p["callSignB"]) for p in result["pairs"]], expected)
@@ -103,7 +104,7 @@ class ApiTests(unittest.TestCase):
 
     def test_invalid_aircraft(self):
         for field, values in {
-            "callSign": ["", "12345678", "A-B", "A B", "Å", "alpha", 42],
+            "callSign": ["", "  ", "1212", "12345678", "ABC12345", "A-B", "A B", "Å", "alpha", " alpha ", 42],
             "latitudeDegrees": [-90.01, 90.01, "0"],
             "longitudeDegrees": [-180.01, 180.01, None],
             "altitudeFeet": [-2000.1, 60000.1, True, float("nan"), float("inf")],
@@ -126,7 +127,7 @@ class ApiTests(unittest.TestCase):
             self.request("/api/conflicts", {"aircraft": aircraft, "thresholds": thresholds}, expected=400)
         for body in [[], {}, {"aircraft": {}}, {"aircraft": [None, plane("A")]},
                      {"aircraft": []}, {"aircraft": [plane("A")]},
-                     {"aircraft": [plane(str(i)) for i in range(21)]}]:
+                     {"aircraft": [plane(f"P{i}") for i in range(21)]}]:
             self.request("/api/conflicts", body, expected=400)
         self.request("/api/separation", {"aircraft": aircraft + [plane("C")]}, expected=400)
         for raw in ["{", '{"aircraft":', '1e999', 'null']:

@@ -1,73 +1,109 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Plane, X } from 'lucide-react'
-import { inRange, type Aircraft } from './scenario'
+import { useState, type FormEvent } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { fields, validateAircraft, type Draft } from './aircraftInput'
+import { palette, type MarkerAircraft } from './scenario'
+import { suggestedColor } from './airlines'
 
 interface Props {
-  original?: Aircraft
-  roster: Aircraft[]
-  onSave: (aircraft: Aircraft) => void
-  onClose: () => void
+  mode: 'Add' | 'Edit'
+  original?: MarkerAircraft
+  roster: MarkerAircraft[]
+  limit: number
+  onSave: (p: MarkerAircraft) => void
+  onCancel?: () => void
 }
-
-const numericFields = [
-  { key: 'latitudeDegrees', label: 'Latitude (°)', min: -90, max: 90 },
-  { key: 'longitudeDegrees', label: 'Longitude (°)', min: -180, max: 180 },
-  { key: 'altitudeFeet', label: 'Altitude (ft)', min: -2000, max: 60000 },
-] as const
-
-export function AircraftForm({ original, roster, onSave, onClose }: Props) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  const [values, setValues] = useState({
-    callSign: original?.callSign ?? '',
-    latitudeDegrees: String(original?.latitudeDegrees ?? ''),
-    longitudeDegrees: String(original?.longitudeDegrees ?? ''),
-    altitudeFeet: String(original?.altitudeFeet ?? ''),
-  })
-  const [error, setError] = useState('')
-  useEffect(() => {
-    const node = dialog.current!
-    node.showModal()
-    return () => node.close()
-  }, [])
-
-  function submit(event: FormEvent) {
-    event.preventDefault()
-    if (!/^[A-Za-z0-9]{1,7}$/.test(values.callSign)) {
-      setError('Enter a callsign with 1–7 letters (A–Z) or digits.')
-      return
-    }
-    const callSign = values.callSign.toUpperCase()
-    if (roster.some(p => p !== original && p.callSign === callSign)) {
-      setError('This callsign already belongs to another aircraft.')
-      return
-    }
-    for (const field of numericFields) {
-      if (!inRange(values[field.key], field)) {
-        setError(`${field.label} must be between ${field.min} and ${field.max}.`)
-        return
-      }
-    }
-    onSave({ callSign, latitudeDegrees: Number(values.latitudeDegrees),
-      longitudeDegrees: Number(values.longitudeDegrees), altitudeFeet: Number(values.altitudeFeet) })
+function draftOf(p?: MarkerAircraft): Draft {
+  return {
+    callSign: p?.callSign ?? '',
+    latitudeDegrees: String(p?.latitudeDegrees ?? ''),
+    longitudeDegrees: String(p?.longitudeDegrees ?? ''),
+    altitudeFeet: String(p?.altitudeFeet ?? ''),
+    color: p?.color ?? palette[0],
   }
-
-  return <dialog ref={dialog} aria-labelledby="form-heading" onCancel={onClose}>
-    <form onSubmit={submit}>
-      <div className="panel-heading"><h2 id="form-heading"><Plane/> {original ? 'Edit aircraft' : 'Add aircraft'}</h2>
-        <button type="button" className="icon-btn" aria-label="Close aircraft form" onClick={onClose}><X/></button></div>
-      <div className="form-fields">
-        <label>Callsign<input autoFocus required pattern="[A-Za-z0-9]{1,7}" maxLength={7}
-          title="1–7 letters or digits" value={values.callSign}
-          onChange={e => { setError(''); setValues({ ...values, callSign: e.target.value }) }}/></label>
-        {numericFields.map(field => <label key={field.key}>{field.label}
-          <input type="number" required step="any" min={field.min} max={field.max} value={values[field.key]}
-            onChange={e => { setError(''); setValues({ ...values, [field.key]: e.target.value }) }}/>
-          <small>{field.min} to {field.max}</small>
-        </label>)}
-        {error && <p className="error" role="alert">{error}</p>}
-      </div>
-      <div className="form-actions"><button type="button" onClick={onClose}>Cancel</button>
-        <button className="primary" type="submit">{original ? 'Save changes' : 'Add aircraft'}</button></div>
+}
+export function AircraftForm({ mode, original, roster, limit, onSave, onCancel }: Props) {
+  const [draft, setDraft] = useState(() => draftOf(original))
+  const [manualColor, setManualColor] = useState(!!original)
+  const [error, setError] = useState('')
+  const edit = mode === 'Edit'
+  function change(key: keyof Draft, value: string) {
+    if (key === 'color') setManualColor(true)
+    setDraft({ ...draft, [key]: value, ...(key === 'callSign' && !manualColor ? { color: suggestedColor(value) } : {}) })
+    setError('')
+  }
+  function submit(e: FormEvent) {
+    e.preventDefault()
+    try {
+      if (!edit && roster.length >= limit)
+        throw Error('A calculation supports at most ' + limit + ' aircraft.')
+      const p = validateAircraft(draft, new Set(roster.filter((a) => a !== original).map((a) => a.callSign)))
+      onSave(p)
+      setError('')
+      if (!edit) { setDraft(draftOf()); setManualColor(false) }
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+  return (
+    <form className="panel aircraft-form" aria-label={mode + ' Aircraft'} onSubmit={submit}>
+      <h2>{mode} Aircraft</h2>
+      <fieldset disabled={edit && !original}>
+        <div className="form-grid">
+          <label>
+            Callsign <em>*</em>
+            <input
+              required
+              autoCapitalize="characters"
+              value={draft.callSign}
+              placeholder="e.g., AAL101"
+              onChange={(e) => change('callSign', e.target.value)}
+            />
+          </label>
+          {fields.map((f) => (
+            <label key={f.key}>
+              {f.label} <em>*</em>
+              <input
+                type="number"
+                required
+                step="any"
+                min={f.min}
+                max={f.max}
+                value={draft[f.key]}
+                placeholder={'e.g., ' + f.example}
+                onChange={(e) => change(f.key, e.target.value)}
+              />
+            </label>
+          ))}
+          <label>
+            Color (map)
+            <span className="color-control">
+              <i className="swatch" style={{ background: draft.color }} />
+              <ChevronDown />
+              <input type="color" value={draft.color} onChange={(e) => change('color', e.target.value)} />
+            </span>
+          </label>
+        </div>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="actions">
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(draftOf(original))
+              setManualColor(!!original)
+              setError('')
+              if (edit) onCancel?.()
+            }}
+          >
+            {edit ? 'Cancel' : 'Clear'}
+          </button>
+          <button className="primary">{edit ? 'Save Changes' : 'Add Aircraft'}</button>
+        </div>
+      </fieldset>
+      {edit && !original && <p className="note">Select Edit beside an aircraft to change it.</p>}
     </form>
-  </dialog>
+  )
 }
