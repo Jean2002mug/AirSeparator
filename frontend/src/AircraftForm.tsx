@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { fields, validateAircraft, type Draft } from './aircraftInput'
-import { palette, type MarkerAircraft } from './scenario'
+import { maxUserAircraft, palette, type MarkerAircraft } from './scenario'
 import { suggestedColor } from './airlines'
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   original?: MarkerAircraft
   roster: MarkerAircraft[]
   limit: number
+  userCount: number
   onSave: (p: MarkerAircraft) => void
   onCancel?: () => void
 }
@@ -21,7 +22,7 @@ function draftOf(p?: MarkerAircraft): Draft {
     color: p?.color ?? palette[0],
   }
 }
-export function AircraftForm({ mode, original, roster, limit, onSave, onCancel }: Props) {
+export function AircraftForm({ mode, original, roster, limit, userCount, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState(() => draftOf(original))
   const [manualColor, setManualColor] = useState(!!original)
   const [error, setError] = useState('')
@@ -34,6 +35,8 @@ export function AircraftForm({ mode, original, roster, limit, onSave, onCancel }
   function submit(e: FormEvent) {
     e.preventDefault()
     try {
+      if (!edit && userCount >= maxUserAircraft)
+        throw Error('You have reached the limit of ' + maxUserAircraft + ' user-added aircraft. Remove an aircraft before adding another.')
       if (!edit && roster.length >= limit)
         throw Error('A calculation supports at most ' + limit + ' aircraft.')
       const p = validateAircraft(draft, new Set(roster.filter((a) => a !== original).map((a) => a.callSign)))

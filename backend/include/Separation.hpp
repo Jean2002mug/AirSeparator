@@ -17,7 +17,7 @@ struct SeparationThresholds {
     static constexpr double minVerticalFeet = 100.0, maxVerticalFeet = 5000.0;
 };
 
-inline constexpr std::size_t minAircraft = 2, maxAircraft = 20;
+inline constexpr std::size_t minAircraft = 2, maxAircraft = 50;
 
 struct PairSeparation {
     std::string callSignA;

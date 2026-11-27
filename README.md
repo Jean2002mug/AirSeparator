@@ -39,7 +39,7 @@ python backend/tests/test_api.py --port 8088
 
 Health should report `ok`. The optional Python command runs the seven HTTP tests through Nginx, including both POST endpoints. In the browser, **Bay approach** should show one warning across three pairs and **Altitude spacing** should show zero. If startup fails, inspect `docker compose logs frontend backend`.
 
-To verify the five pages, run `node scripts/verify-ui.mjs` from the repository root with the stack running, Node.js 22+ and Chrome installed. It exercises editing, CSV import, filters, results, and keyboard navigation, and saves ten desktop captures to `design/screenshots/sprint-3.1/`. Set `CHROME_PATH` for a non-default Chrome executable and `AIRSEPARATOR_URL` for a different local port.
+To verify the five pages, run `node scripts/verify-ui.mjs` from the repository root with the stack running, Node.js 22+ and Chrome installed. It exercises editing, CSV import, filters, results, and keyboard navigation, and saves desktop captures to `design/screenshots/sprint-3.2/`. Set `CHROME_PATH` for a non-default Chrome executable and `AIRSEPARATOR_URL` for a different local port. Set `AIRSEPARATOR_ORIGINAL_CSV` to a CSV path to include that file in the browser test.
 
 The backend image build compiles C++20 and runs CTest. The frontend image build runs TypeScript checking and the Vite production build. The final images contain the server and the compiled website respectively. To repeat the build checks from scratch and then start the updated images:
 
@@ -81,9 +81,13 @@ npm.cmd run dev
 
 Open the local address Vite prints (usually `http://127.0.0.1:5173`). Vite forwards `/api` and `/health` to `http://127.0.0.1:8080`. To use another backend port, set `$env:AIRSEPARATOR_API_URL = 'http://127.0.0.1:8081'` before starting Vite. Run `npm.cmd run build` in `frontend` to type-check and generate the production files.
 
-The workspace opens on **Simulation** with four aircraft in the **Multiple Aircraft** scenario. Choose a pair to inspect the engine's distances and thresholds. **Scenarios** lets you filter, preview, and load examples. Loading resets scenario aircraft and thresholds, and keeps your user-added aircraft when the combined roster is valid.
+The workspace opens on **Simulation** with four aircraft in the **Multiple Aircraft** scenario. Use the summary cards to select the aircraft list or filter pairs by status. The default **Nearby** view displays pairs whose full-precision engine distance is at most 100 NM. Change the radius (minimum 20 NM) or select **All Pairs** to view every evaluated pair. The display shows evaluated and displayed counts. **Scenarios** lets you filter, preview, and load simulated examples. Loading resets scenario aircraft and thresholds, and keeps your user-added aircraft when the combined roster is valid.
 
-Use **Aircraft** to add, edit, remove, or import aircraft. CSV files use the header `callSign,latitudeDegrees,longitudeDegrees,altitudeFeet`, with an optional `color` column containing a hex color such as `#168afa`. Import validates the entire file before adding any rows. Scenario and roster edits last for the current browser session until reload. The theme switch remembers your preference across reloads.
+Use **Aircraft** to add, edit, remove, or import aircraft. CSV accepts headings such as `Call Sign,Latitude,Longitude,Altitude (ft)` or `callSign,latitudeDegrees,longitudeDegrees,altitudeFeet`. An optional `color` column accepts a hex color such as `#168afa`. Blank lines are ignored. Import validates all rows before changing the roster. **Merge** retains user-added aircraft. **Replace User-Added** explicitly replaces them while retaining scenario aircraft. Both modes allow up to 30 user-added aircraft and 50 combined aircraft. Scenario, roster and scenario filter choices are retained in browser session storage during the tab's session. The theme switch remembers your preference across reloads.
+
+On the map, use the height slider to resize and the focus menu to show the local scenario, selected pair or one aircraft. The crosshair fits all aircraft. Hover or select a marker to see its details. Keyboard users can focus a marker and press Enter. The hover checkbox controls pointer-triggered details. The map and scenario data are simulated.
+
+Run the frontend's CSV and pair-filter checks with `npm.cmd --prefix frontend test` from the repository root.
 
 **Results** displays pairwise distances, a summary, and deterministic explanations from the engine response. Live AI follow-up is reserved for Sprint 4. **About** explains the model, rules, and educational use. Map tiles require internet access.
 
@@ -121,13 +125,13 @@ The aircraft share coordinates and differ in altitude by 500 ft, so the default 
 | `GET /health` | Returns `{"status":"ok"}`. |
 | `GET /api/config` | Returns `defaults` for `horizontalNm` and `verticalFeet`, plus inclusive `min` and `max` limits for both thresholds and the aircraft count. |
 | `POST /api/separation` | Takes exactly two entries in `aircraft`. Returns one pair and its warning count, as shown above. |
-| `POST /api/conflicts` | Takes 2–20 entries in `aircraft`. Returns every distinct pair in input order with a `WARNING` or `NO_WARNING` status, and counts the pairs with a warning. |
+| `POST /api/conflicts` | Takes 2–50 entries in `aircraft`. Returns every distinct pair in input order with a `WARNING` or `NO_WARNING` status, and counts the pairs with a warning. |
 
 Send POST bodies as JSON. Both routes accept an optional top-level `thresholds` object alongside `aircraft`. For example, `"thresholds": {"verticalFeet": 500}` gives the example pair `NO_WARNING` because its vertical distance equals the new threshold. Omitted fields use the defaults. Overrides apply only to that request.
 
 | Field | Accepted values |
 | --- | --- |
-| `callSign` | 1–7 ASCII letters or digits, unique within the request after conversion to uppercase |
+| `callSign` | 1–7 ASCII letters or digits after trimming surrounding whitespace, including at least one letter, unique after conversion to uppercase |
 | `latitudeDegrees`, `longitudeDegrees` | Finite numbers in [−90, 90] and [−180, 180] respectively |
 | `altitudeFeet` | Finite number in [−2000, 60000] |
 | `thresholds.horizontalNm` | Finite number in [0.5, 20], default 5 |
@@ -140,3 +144,5 @@ Each aircraft requires all four fields. Malformed JSON, missing fields, unknown 
 Horizontal distance uses the Haversine formula on a sphere of radius **3440.065 NM**. Vertical distance uses the absolute difference between the two altitudes in feet. Both calculations and the warning decision live in the C++ engine.
 
 The local server uses [cpp-httplib v0.58.0](https://github.com/yhirose/cpp-httplib/tree/v0.58.0) for HTTP and [nlohmann/json v3.12.0](https://github.com/nlohmann/json/tree/v3.12.0) for JSON parsing and serialization. Each library ships as one header with its license in `backend/third_party`, so builds work offline. Neither library is needed by the calculation engine.
+
+Airline names are recognized only for supported ICAO prefixes followed by a flight number, using the [FAA operator designator list](https://www.faa.gov/air_traffic/publications/atpubs/cnt_html/chap3_section_3.html). Locally bundled logos come from Wikimedia Commons for [Air Canada](https://commons.wikimedia.org/wiki/File:Air_Canada_2017.svg), [Delta](https://commons.wikimedia.org/wiki/File:Delta_logo.svg), [United](https://commons.wikimedia.org/wiki/File:United_Airlines_wordmark.svg) and [Air Transat](https://commons.wikimedia.org/wiki/File:Air_Transat_logo.svg). Commons identifies these files as public-domain simple logos and notes applicable trademark rights. Ethiopian Airlines and Royal Air Maroc currently use the generic aircraft icon. Logo or airline names identify simulated callsigns and do not indicate affiliation.

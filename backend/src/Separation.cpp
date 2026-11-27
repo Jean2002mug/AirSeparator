@@ -52,7 +52,7 @@ double horizontalSeparationNm(const Aircraft& a, const Aircraft& b) {
 
 ScenarioResult evaluateScenario(std::vector<Aircraft> aircraft, SeparationThresholds thresholds) {
     if (aircraft.size() < minAircraft || aircraft.size() > maxAircraft) {
-        throw std::invalid_argument("a scenario must contain 2 to 20 aircraft");
+        throw std::invalid_argument("a scenario must contain 2 to " + std::to_string(maxAircraft) + " aircraft");
     }
     checkRange(thresholds.horizontalNm, thresholds.minHorizontalNm, thresholds.maxHorizontalNm, "horizontalNm");
     checkRange(thresholds.verticalFeet, thresholds.minVerticalFeet, thresholds.maxVerticalFeet, "verticalFeet");

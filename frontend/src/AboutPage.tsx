@@ -72,7 +72,7 @@ const sections = [
     items: [
       'Preview and load examples on Scenarios. User-added aircraft stay in the roster.',
       'On Aircraft, enter a unique callsign, position, altitude, and map color, or import a CSV.',
-      'Use 2–20 aircraft to calculate results. Expand Separation thresholds to adjust the limits.',
+      'Use 2–50 aircraft to calculate results. You can add up to 30 of your own. Expand Separation thresholds to adjust the limits.',
       'Choose a pair to inspect its distances and status on Simulation or Results.',
     ],
   },

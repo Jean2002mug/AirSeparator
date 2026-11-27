@@ -8,6 +8,7 @@ import { ResultsPage } from './ResultsPage'
 import { AboutPage } from './AboutPage'
 import {
   calculationBody,
+  maxTotalAircraft,
   inRange,
   pairId,
   type MarkerAircraft,
@@ -65,7 +66,7 @@ export default function App() {
     !!config &&
     inRange(values.horizontalNm, config.limits.horizontalNm) &&
     inRange(values.verticalFeet, config.limits.verticalFeet)
-  const limit = config?.limits.aircraft.max ?? 20
+  const limit = config?.limits.aircraft.max ?? maxTotalAircraft
   const validCount = aircraft.length >= (config?.limits.aircraft.min ?? 2) && aircraft.length <= limit
   const calc = useApi<Results>(
     '/api/conflicts',
@@ -97,7 +98,7 @@ export default function App() {
     : !config
       ? 'Connecting to the engine…'
       : !validCount
-        ? 'Use 2–20 aircraft to calculate separation.'
+        ? 'Use ' + (config?.limits.aircraft.min ?? 2) + '–' + limit + ' aircraft to calculate separation.'
         : !validThresholds
           ? 'Enter thresholds within the displayed ranges.'
           : 'Calculating separation…'

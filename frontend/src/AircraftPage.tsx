@@ -209,6 +209,7 @@ export function AircraftPage({ user, scenario, limit, add, replace, remove }: Pr
           mode="Add"
           roster={roster}
           limit={limit}
+          userCount={user.length}
           onSave={(p) => {
             add([p])
             setTab('user')
@@ -224,6 +225,7 @@ export function AircraftPage({ user, scenario, limit, add, replace, remove }: Pr
             original={editing}
             roster={roster}
             limit={limit}
+            userCount={user.length}
             onSave={(p) => {
               if (editing) replace(editing, p)
               setEditing(p)

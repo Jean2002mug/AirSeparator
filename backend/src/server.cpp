@@ -62,7 +62,7 @@ Json separationResponse(const Json& body, bool singlePair) {
         throw std::invalid_argument("/api/separation requires exactly 2 aircraft");
     }
     if (entries.size() < minAircraft || entries.size() > maxAircraft) {
-        throw std::invalid_argument("a scenario must contain 2 to 20 aircraft");
+        throw std::invalid_argument("a scenario must contain 2 to " + std::to_string(maxAircraft) + " aircraft");
     }
     SeparationThresholds thresholds;
     if (body.contains("thresholds")) {

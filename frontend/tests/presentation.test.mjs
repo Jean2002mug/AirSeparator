@@ -32,6 +32,16 @@ test('CSV fails atomically for invalid data, duplicates, headers and excess capa
   assert.throws(() => importCsv(fixture.replace('Longitude','Latitude'), [], [], 'merge', 20), /same field/)
   assert.throws(() => importCsv(fixture.replace('Longitude','Longtude'), [], [], 'merge', 20), /Longtude/)
 })
+test('CSV accepts 30 user aircraft alongside a scenario and rejects a 31st', () => {
+  const scenario = [{callSign: 'SCEN1'}, {callSign: 'SCEN2'}]
+  const records = Array.from({length: 30}, (_, i) => `PLANE${i},45,-73,10000`).join('\n')
+  const csv = 'callSign,latitude,longitude,altitude\n' + records
+  const imported = importCsv(csv, scenario, [], 'merge', 50)
+  assert.equal(imported.length, 30)
+  assert.throws(() => importCsv('callSign,latitude,longitude,altitude\nEXTRA,45,-73,10000',
+    scenario, imported, 'merge', 50), /31 user-added aircraft. The limit is 30/)
+  assert.equal(imported.length, 30)
+})
 test('callsigns agree with the API, operator recognition requires a flight identifier', () => {
   assert.equal(validateAircraft({...base,callSign:'  ab12345\t'}, new Set()).callSign, 'AB12345')
   for (const callSign of ['1212','12345678','abcdefgh','A B','X+1','é'])

@@ -58,7 +58,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request("/api/config"), {
             "defaults": {"horizontalNm": 5, "verticalFeet": 1000},
             "limits": {"horizontalNm": {"min": 0.5, "max": 20},
-                       "verticalFeet": {"min": 100, "max": 5000}, "aircraft": {"min": 2, "max": 20}}})
+                       "verticalFeet": {"min": 100, "max": 5000}, "aircraft": {"min": 2, "max": 50}}})
 
     def test_pair_and_reversed_order(self):
         aircraft = [plane("a123", lon=179.99), plane("b2", lon=-179.99, altitude=10400)]
@@ -101,6 +101,10 @@ class ApiTests(unittest.TestCase):
         expected = list(itertools.combinations([p["callSign"] for p in aircraft], 2))
         self.assertEqual([(p["callSignA"], p["callSignB"]) for p in result["pairs"]], expected)
         self.assertEqual(result["warningCount"], 190)
+        aircraft = [plane(f"P{i}") for i in range(50)]
+        result = self.request("/api/conflicts", {"aircraft": aircraft})
+        self.assertEqual(len(result["pairs"]), 1225)
+        self.assertEqual(result["warningCount"], 1225)
 
     def test_invalid_aircraft(self):
         for field, values in {
@@ -127,7 +131,7 @@ class ApiTests(unittest.TestCase):
             self.request("/api/conflicts", {"aircraft": aircraft, "thresholds": thresholds}, expected=400)
         for body in [[], {}, {"aircraft": {}}, {"aircraft": [None, plane("A")]},
                      {"aircraft": []}, {"aircraft": [plane("A")]},
-                     {"aircraft": [plane(f"P{i}") for i in range(21)]}]:
+                     {"aircraft": [plane(f"P{i}") for i in range(51)]}]:
             self.request("/api/conflicts", body, expected=400)
         self.request("/api/separation", {"aircraft": aircraft + [plane("C")]}, expected=400)
         for raw in ["{", '{"aircraft":', '1e999', 'null']:

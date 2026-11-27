@@ -151,7 +151,7 @@ export function AirspaceMap({
     const view = map.current!, layer = L.layerGroup().addTo(view)
     const popup = L.popup({autoPan: false, closeButton: false, offset: [0, -12], className:'aircraft-popup'})
     let pinned: L.Marker | undefined
-    const close = () => { pinned = undefined; popup.remove() }
+    const close = () => { pinned = undefined; view.closePopup(popup) }
     view.on('click', close)
     function escape(e: KeyboardEvent) { if (e.key === 'Escape') close() }
     view.getContainer().addEventListener('keydown', escape)
@@ -176,9 +176,13 @@ export function AirspaceMap({
       const element = m.getElement()!
       element.setAttribute('aria-label', p.callSign + ', aircraft details')
       const show = () => popup.setLatLng(m.getLatLng()).setContent(detailContent(p)).openOn(view)
-      const hideTransient = () => { if (!pinned) popup.remove() }
+      const hideTransient = () => { if (!pinned) view.closePopup(popup) }
       if (hover) m.on('mouseover', () => { if (!pinned) show() }).on('mouseout', hideTransient)
-      element.addEventListener('focus', () => { if (!pinned) show() })
+      element.addEventListener('focus', () => {
+        window.setTimeout(() => {
+          if (!pinned && document.activeElement === element) show()
+        }, 0)
+      })
       element.addEventListener('blur', hideTransient)
       const toggle = () => { if (pinned === m) close(); else { pinned = m; show() } }
       m.on('click', toggle)

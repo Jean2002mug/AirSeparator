@@ -1,4 +1,4 @@
-import { inRange, type MarkerAircraft } from './scenario'
+import { inRange, maxUserAircraft, type MarkerAircraft } from './scenario'
 import { suggestedColor } from './airlines'
 export const fields = [
   { key: 'latitudeDegrees', label: 'Latitude (°)', min: -90, max: 90, example: '45.0000' },
@@ -94,6 +94,11 @@ export function importCsv(text: string, scenario: MarkerAircraft[], user: Marker
     }
   })
   if (!added.length) throw Error('Include at least one aircraft row beneath the header.')
+  const userTotal = (mode === 'merge' ? user.length : 0) + added.length
+  if (userTotal > maxUserAircraft)
+    throw Error('This import would create ' + userTotal + ' user-added aircraft. The limit is ' + maxUserAircraft +
+      '. Remove ' + (userTotal - maxUserAircraft) + ' aircraft or CSV rows' +
+      (mode === 'merge' && user.length && added.length <= maxUserAircraft ? ', or choose Replace User-Added.' : '.'))
   const total = retained.length + added.length
   if (total > limit) {
     const counts = scenario.length + ' scenario + ' + (mode === 'merge' ? user.length : 0) + ' user-added + ' + added.length + ' imported = ' + total

@@ -4,6 +4,8 @@ export interface Aircraft {
   longitudeDegrees: number
   altitudeFeet: number
 }
+export const maxUserAircraft = 30
+export const maxTotalAircraft = 50
 export interface MarkerAircraft extends Aircraft {
   color: string
 }
