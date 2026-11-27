@@ -156,4 +156,6 @@ export function inRange(text: string, range: Range) {
 }
 export const formatNumber = (value: number, digits = 2) =>
   value.toLocaleString('en-US', { maximumFractionDigits: digits })
+const measurementFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+export const formatMeasurement = (value: number) => measurementFormat.format(value)
 export const pairId = (p: Pair) => p.callSignA + '/' + p.callSignB

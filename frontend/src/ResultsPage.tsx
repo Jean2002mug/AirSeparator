@@ -3,7 +3,7 @@ import { Activity, List, MessageSquareText, Plane } from 'lucide-react'
 import { AircraftTable } from './AircraftPage'
 import { EmptyPairs, Interpretation, Metrics, PairControls, PairTable } from './PairResults'
 import { cardFor, type Card, type PairView } from './pairView'
-import { formatNumber, type MarkerAircraft, type Pair, type Results, type Thresholds } from './scenario'
+import { formatMeasurement, type MarkerAircraft, type Pair, type Results, type Thresholds } from './scenario'
 
 const views = [
   { name: 'Pairwise Results', Icon: Activity },
@@ -58,7 +58,7 @@ export function ResultsPage({ aircraft, title, results, pair, select, thresholds
         ) : view === 'Pairwise Results' ? (
           <div className="results-split">
             {pair ? <PairTable pairs={pairView.pairs} selected={pair} onSelect={select} /> : <EmptyPairs view={pairView}/>}
-            <Interpretation pair={pair} thresholds={thresholds} />
+            <Interpretation key={JSON.stringify([pair, thresholds, aircraft, title])} pair={pair} thresholds={thresholds} aircraft={aircraft} />
           </div>
         ) : view === 'Summary' ? (
           <section className="panel">
@@ -69,13 +69,13 @@ export function ResultsPage({ aircraft, title, results, pair, select, thresholds
             </p>
             <dl>
               <dt>Horizontal threshold</dt>
-              <dd>{formatNumber(thresholds.horizontalNm)} NM</dd>
+              <dd>{formatMeasurement(thresholds.horizontalNm)} NM</dd>
               <dt>Vertical threshold</dt>
-              <dd>{formatNumber(thresholds.verticalFeet)} ft</dd>
+              <dd>{formatMeasurement(thresholds.verticalFeet)} ft</dd>
             </dl>
           </section>
         ) : (
-          <Interpretation pair={pair} thresholds={thresholds} />
+          <Interpretation key={JSON.stringify([pair, thresholds, aircraft, title])} pair={pair} thresholds={thresholds} aircraft={aircraft} />
         )}
       </div>
     </main>

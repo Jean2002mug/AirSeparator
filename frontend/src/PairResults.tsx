@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Check, TriangleAlert, MessageSquareText, Send } from 'lucide-react'
 import { minNearbyNm, type Card, type PairView, type PairFilter } from './pairView'
-import { formatNumber as fmt, pairId, type Pair, type Results, type Thresholds } from './scenario'
+import { formatMeasurement as fmt, pairId, calculationBody, type Aircraft, type Pair, type Results, type Thresholds } from './scenario'
 
 export function Status({ warning }: { warning: boolean }) {
   return (
@@ -88,7 +88,7 @@ export function PairTable({
                   {p.callSignA} – {p.callSignB}
                 </button>
               </td>
-              <td>{fmt(p.horizontalNm, 2)}</td>
+              <td>{fmt(p.horizontalNm)}</td>
               <td>{fmt(p.verticalFeet)}</td>
               <td>
                 <Status warning={p.status === 'WARNING'} />
@@ -143,7 +143,41 @@ export function Analysis({ pair, thresholds }: { pair: Pair; thresholds: Thresho
     </section>
   )
 }
-export function Interpretation({ pair, thresholds }: { pair?: Pair; thresholds: Thresholds }) {
+export function explanationLabel(source: unknown) {
+  switch (source) {
+    case 'gemini': return 'Live AI (Gemini)'
+    case 'mock':
+    case 'fallback': return 'Response'
+    case 'boundary': return 'Simulator scope'
+    default: return 'Source unavailable'
+  }
+}
+
+export function Interpretation({ pair, thresholds, aircraft }: { pair?: Pair; thresholds: Thresholds; aircraft: Aircraft[] }) {
+  const [question, setQuestion] = useState('')
+  const [messages, setMessages] = useState<{question: string; text: string; label: string}[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  async function ask(text: string) {
+    if (!pair || loading) return
+    const selected = [pair.callSignA, pair.callSignB].map(name => aircraft.find(a => a.callSign === name))
+    if (selected.some(a => !a)) return
+    setLoading(true)
+    setError('')
+    try {
+      const body = JSON.parse(calculationBody(selected as Aircraft[], thresholds))
+      if (text) body.question = text
+      if (text) body.context = messages.slice(-3).map(message => ({question: message.question, answer: message.text}))
+      const response = await fetch('/api/ai/explain', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+      const data = await response.json()
+      if (!response.ok) throw Error(data.error || 'AI explanation is unavailable.')
+      const label = explanationLabel(data.source)
+      setMessages(previous => [...previous, {question:text, text:data.explanation, label}].slice(-6))
+      setQuestion('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'AI explanation is unavailable.')
+    } finally { setLoading(false) }
+  }
   return (
     <section className="panel interpretation">
       <h3>
@@ -160,15 +194,22 @@ export function Interpretation({ pair, thresholds }: { pair?: Pair; thresholds: 
           {fmt(thresholds.verticalFeet)} ft.
         </p>
       )}
-      <p className="note">
-        Rule-based explanation from the engine. Live AI follow-up is planned for Sprint 4.
-      </p>
-      <fieldset disabled>
-        <input aria-label="AI follow-up unavailable until Sprint 4" placeholder="Ask a follow-up question…" />
-        <button aria-label="Send question">
+      <p className="note">Ask about aviation concepts, the warning rule or the selected pair. AI answers are educational and can make mistakes. The C++ engine determines the results.</p>
+      <button type="button" disabled={!pair || loading} onClick={() => void ask('')}>Explain Pair</button>
+      {messages.map((message, i) => <div className="ai-message" key={i}>
+        {message.question && <p><strong>You</strong> {message.question}</p>}
+        <p><strong>{message.label}</strong> {message.text}</p>
+      </div>)}
+      {loading && <p role="status">Generating explanation…</p>}
+      {error && <p role="alert" className="error"><strong>AI unavailable</strong> {error}</p>}
+      <form onSubmit={e => {e.preventDefault(); if (question.trim()) void ask(question.trim())}}>
+        <fieldset disabled={!pair || loading}>
+        <input aria-label="AI follow-up question" placeholder="Ask a follow-up question…" maxLength={500} value={question} onChange={e => setQuestion(e.target.value)} />
+        <button aria-label="Send question" disabled={!question.trim()}>
           <Send />
         </button>
       </fieldset>
+      </form>
     </section>
   )
 }

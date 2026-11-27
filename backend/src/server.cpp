@@ -1,4 +1,5 @@
 #include "Separation.hpp"
+#include "ai.hpp"
 #include <httplib/httplib.h>
 #include <nlohmann/json.hpp>
 #include <algorithm>
@@ -128,6 +129,7 @@ int main(int argc, char** argv) {
     server.Get("/api/config", [](const auto&, auto& res) { sendJson(res, config()); });
     server.Post("/api/separation", calculate);
     server.Post("/api/conflicts", calculate);
+    server.Post("/api/ai/explain", explainPair);
     if (port == 0) {
         port = server.bind_to_any_port(host);
     } else if (!server.bind_to_port(host, port)) {

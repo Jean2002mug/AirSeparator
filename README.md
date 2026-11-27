@@ -89,7 +89,23 @@ On the map, use the height slider to resize and the focus menu to show the local
 
 Run the frontend's CSV and pair-filter checks with `npm.cmd --prefix frontend test` from the repository root.
 
-**Results** displays pairwise distances, a summary, and deterministic explanations from the engine response. Live AI follow-up is reserved for Sprint 4. **About** explains the model, rules, and educational use. Map tiles require internet access.
+**Results** displays pairwise distances, a summary, deterministic explanations, and an on-demand AI explanation. Select a pair and choose **Explain Pair**. Follow-up questions use up to three prior exchanges. The assistant is educational and the C++ engine remains authoritative. **About** explains the model, rules, and educational use. Map tiles require internet access.
+
+## AI explanation setup
+
+Copy `.env.example` to `.env` at the repository root and set `GEMINI_API_KEY` locally. Keep that file private. Docker Compose sends it only to the backend. Set `GEMINI_MODEL` to a model available to your Google project. The default is `gemini-3.5-flash-lite`. Model availability and free-tier quota depend on the project. Restart the stack after changing environment values. For local Windows use, set `$env:GEMINI_API_KEY` and optionally `$env:GEMINI_MODEL` in the server's terminal. No key is needed for ordinary separation calculations.
+
+The API accepts `POST /api/ai/explain` with two `aircraft`, both `thresholds`, optional `question` text (up to 500 bytes), and up to three prior `context` entries with `question` and `answer`. The response has an engine-calculated `pair` and separately identified `explanation`. The backend limits AI requests to ten per minute per server and limits provider response size and time. `AIRSEPARATOR_AI_PROVIDER=mock` enables a local test provider without a key or network request. Use the mock for automated testing and do not put real keys in source files or images.
+
+The provider uses Google's [generateContent REST API](https://ai.google.dev/api/generate-content) with `x-goog-api-key` and TLS certificate validation. Windows uses WinHTTP and Linux uses libcurl with the system CA store. Gemini writes short educational answers using named references to the selected pair. C++ inserts the measured values, comparison to each threshold and status. The assistant uses up to three prior question-and-answer exchanges for follow-ups. Concept answers can use general mathematical quantities. Selected-pair measurements use engine-supplied references. The server screens for operational language and labels each response with its source (`gemini`, `mock`, `boundary` or `fallback`). A rejected follow-up gets a verification message. Static data cannot supply aircraft speeds or predict collisions. Provider outages and quota errors leave the calculation visible. These checks cannot establish the truth of every sentence.
+
+### Controlled live Gemini smoke test (one request, only after explicit approval)
+
+1. Use a project with free-tier access to the configured model. Stop if billing activation is requested. Put the key in the ignored local `.env` using an editor. Keep it out of shell history, screenshots and diagnostic output.
+2. In PowerShell set `$env:AIRSEPARATOR_AI_PROVIDER='gemini'` and run `docker compose up -d --build --wait`. Open the local app on port 8088 and load a sample scenario.
+3. In Results, select a pair and record its distances and status. Open AI Interpretation and click **Explain Pair** once. Compare the answer with those values. A **Live AI (Gemini)** label identifies accepted Gemini text. A calculation fallback, provider error or quota message does not confirm a successful generated answer. Record only the model, outcome and whether the values agreed. Stop after that request.
+4. Restore mock mode with `$env:AIRSEPARATOR_AI_PROVIDER='mock'` and `docker compose up -d --wait` before running automated browser tests.
+
 
 ## Try a separation calculation
 

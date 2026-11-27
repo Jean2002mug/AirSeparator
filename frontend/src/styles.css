@@ -888,6 +888,16 @@ em {
 .interpretation h3 svg {
   color: var(--accent);
 }
+.interpretation .note { margin: 12px 0; }
+.ai-message {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel2);
+  overflow-wrap: anywhere;
+}
+.ai-message p + p { margin-top: 8px; }
 .capabilities ul,
 .simple-list {
   padding: 0;

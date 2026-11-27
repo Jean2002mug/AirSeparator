@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { setTimeout as delay } from 'node:timers/promises'
 
 const url = process.env.AIRSEPARATOR_URL || 'http://127.0.0.1:8088/'
-const output = resolve('design/screenshots/sprint-3.2')
+const output = resolve(process.env.AIRSEPARATOR_SCREENSHOTS || 'design/screenshots/sprint-3.2')
 mkdirSync(output, { recursive: true })
 const profile = mkdtempSync(resolve(tmpdir(), 'airseparator-ui-'))
 const chrome = spawn(
@@ -175,6 +175,12 @@ try {
     await page('results')
     await pairCount(6)
     await capture('results', theme)
+    await click('.interpretation > button')
+    await textIn('.ai-message', 'The warning rule')
+    await capture('results-ai', theme)
+    await click('.pair-choice')
+    await wait(() => !document.querySelector('.ai-message'))
+    await click('.pair-table tbody tr:nth-child(2) .pair-choice')
     await page('about')
     await textIn('main', 'not a certified')
     await capture('about', theme)
@@ -255,7 +261,22 @@ try {
     await click('.side-nav button:nth-child(' + (i + 1) + ')')
     await textIn('.results-body h1', heading)
   }
-  assert(await run(() => document.querySelector('.interpretation input').matches(':disabled')))
+  await click('.interpretation > button')
+  await textIn('.ai-message', 'The warning rule')
+  await value('.interpretation input', 'Explain the vertical distance')
+  await click('.interpretation form button')
+  await textIn('.ai-message:last-of-type', 'absolute altitude difference')
+  await textIn('.ai-message:last-of-type p:last-child strong', 'Response')
+  await value('.interpretation input', 'What is a great circle?')
+  await click('.interpretation form button')
+  await textIn('.ai-message:last-of-type', 'center of a sphere')
+  await value('.interpretation input', 'Can you give an example?')
+  await click('.interpretation form button')
+  await textIn('.ai-message:last-of-type', 'equator')
+  await value('.interpretation input', 'Will these aircraft collide?')
+  await click('.interpretation form button')
+  await textIn('.ai-message:last-of-type', 'Static positions cannot predict a collision')
+  await textIn('.ai-message:last-of-type p:last-child strong', 'Response')
   await page('about')
   for (let i = 0; i < 6; i++) {
     await click('.side-nav button:nth-child(' + (i + 1) + ')')

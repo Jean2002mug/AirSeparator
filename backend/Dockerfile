@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim AS build
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        cmake g++ ninja-build python3 \
+        cmake g++ ninja-build python3 libcurl4-openssl-dev \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY CMakeLists.txt .
@@ -13,7 +13,7 @@ RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON 
     && ctest --test-dir /build --output-on-failure
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 \
+RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 libcurl4 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /build/airseparator /usr/local/bin/airseparator
 COPY backend/third_party/httplib/LICENSE /usr/share/doc/airseparator/httplib-LICENSE

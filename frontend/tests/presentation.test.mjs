@@ -8,6 +8,20 @@ after(() => vite.close())
 const { importCsv, validateAircraft } = await vite.ssrLoadModule('/src/aircraftInput.ts')
 const { defaultFilter, minNearbyNm, visiblePairs } = await vite.ssrLoadModule('/src/pairView.ts')
 const { airlineFor, suggestedColor } = await vite.ssrLoadModule('/src/airlines.ts')
+const { formatMeasurement } = await vite.ssrLoadModule('/src/scenario.ts')
+const { explanationLabel } = await vite.ssrLoadModule('/src/PairResults.tsx')
+test('AI attribution requires an explicit provider source', () => {
+  assert.equal(explanationLabel('gemini'), 'Live AI (Gemini)')
+  assert.equal(explanationLabel('mock'), 'Response')
+  assert.equal(explanationLabel('fallback'), 'Response')
+  assert.equal(explanationLabel('ai'), 'Source unavailable')
+  assert.equal(explanationLabel(undefined), 'Source unavailable')
+})
+test('separation measurements show exactly two decimal places', () => {
+  assert.equal(formatMeasurement(0), '0.00')
+  assert.equal(formatMeasurement(1000), '1,000.00')
+  assert.equal(formatMeasurement(4.999), '5.00')
+})
 const fixture = await readFile(new URL('./fixtures/aircraft-13.csv', import.meta.url), 'utf8')
 const base = { callSign: 'p1', latitudeDegrees: '0', longitudeDegrees: '0', altitudeFeet: '0', color: '#123456' }
 
